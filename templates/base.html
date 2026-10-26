@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<title>{% block title %}soju Log Search{% endblock %}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #1a1a2e; color: #e0e0e0; }
+  a { color: #c9a227; }
+  .btn {
+    font-size: 0.75rem; padding: 4px 10px; border-radius: 4px;
+    border: 1px solid #0f3460; background: transparent; color: #aaa;
+    cursor: pointer; white-space: nowrap; text-decoration: none; display: inline-block;
+  }
+  .btn:hover { background: #0f3460; color: #e0e0e0; }
+  .btn.accent { border-color: #e94560; color: #e94560; }
+  .btn.accent:hover { background: #e94560; color: #fff; }
+  .btn.disabled { opacity: 0.35; pointer-events: none; }
+  .user-ctl { display: flex; align-items: center; gap: 8px; margin-left: auto; font-size: 0.78rem; color: #888; }
+  .user-ctl strong { color: #c9a227; font-weight: 600; }
+  .log-line { display: flex; gap: 8px; padding: 2px 14px; font-family: 'Cascadia Code', 'Fira Code', monospace; font-size: 0.78rem; line-height: 1.5; }
+  .log-line.match { background: rgba(233, 69, 96, 0.10); }
+  .lineno { color: #444; min-width: 40px; text-align: right; flex-shrink: 0; user-select: none; text-decoration: none; }
+  a.lineno:hover { color: #c9a227; }
+  .log-text { white-space: pre-wrap; word-break: break-word; color: #ccc; }
+  .log-text .hl { background: rgba(233, 69, 96, 0.38); color: #fff; border-radius: 2px; padding: 0 1px; }
+  {% block style %}{% endblock %}
+</style>
+</head>
+<body>
+{% block body %}{% endblock %}
+{% if user %}
+<form id="logout-form" method="post" action="{{ url_for('logout') }}" hidden>
+  <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+</form>
+{% endif %}
+<script>
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function highlight(text, pattern, isRegex, caseSensitive) {
+  if (!pattern) return escapeHtml(text);
+  try {
+    const flags = caseSensitive ? 'g' : 'gi';
+    const rx = isRegex
+      ? new RegExp(pattern, flags)
+      : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags);
+    let out = '', last = 0, m;
+    while ((m = rx.exec(text)) !== null) {
+      if (m[0] === '') { rx.lastIndex++; continue; }
+      out += escapeHtml(text.slice(last, m.index)) + '<span class="hl">' + escapeHtml(m[0]) + '</span>';
+      last = m.index + m[0].length;
+    }
+    return out + escapeHtml(text.slice(last));
+  } catch (e) { return escapeHtml(text); }
+}
+
+document.querySelectorAll('[data-logout]').forEach(btn =>
+  btn.addEventListener('click', () => document.getElementById('logout-form').submit()));
+</script>
+{% block script %}{% endblock %}
+</body>
+</html>

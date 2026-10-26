@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}{{ target }} · {{ date }} · soju Log Search{% endblock %}
+{% block style %}
+  header {
+    position: sticky; top: 0; z-index: 2; background: #16213e; border-bottom: 1px solid #0f3460;
+    padding: 10px 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  .title strong { color: #e94560; }
+  .title .net { color: #888; font-size: 0.85rem; }
+  .title .date { color: #c9a227; font-weight: 600; font-variant-numeric: tabular-nums; margin-left: 6px; }
+  .nav { display: flex; gap: 6px; flex-wrap: wrap; }
+  main { padding: 8px 0 40px; }
+  .log-line.target { background: rgba(201, 162, 39, 0.22); }
+  .log-line:target { background: rgba(201, 162, 39, 0.22); }
+  .empty { padding: 16px; color: #666; font-size: 0.85rem; }
+{% endblock %}
+{% block body %}
+{% set qs = {'q': query, 'regex': '1' if use_regex else None, 'case': '1' if case_sensitive else None} %}
+<header>
+  <div class="title">
+    <strong>{{ target }}</strong> <span class="net">· {{ network }}</span>
+    <span class="date">{{ date }}</span>
+  </div>
+  <div class="nav">
+    <a class="btn{{ ' disabled' if not prev_date }}" {% if prev_date %}href="{{ url_for('view_log', network=network, target=target, date=prev_date, **qs) }}"{% endif %}>&larr; {{ prev_date or 'Previous day' }}</a>
+    <a class="btn{{ ' disabled' if not next_date }}" {% if next_date %}href="{{ url_for('view_log', network=network, target=target, date=next_date, **qs) }}"{% endif %}>{{ next_date or 'Next day' }} &rarr;</a>
+    <a class="btn" href="{{ url_for('raw_log', network=network, target=target, date=date) }}">Download .log</a>
+    <a class="btn accent" href="{{ url_for('index') }}">Back to search</a>
+  </div>
+  <div class="user-ctl"><span>Logged in as <strong>{{ user }}</strong></span><button class="btn" data-logout>Log out</button></div>
+</header>
+<main id="log">
+  {% for text in lines %}
+  <div class="log-line{{ ' target' if loop.index == line }}" id="L{{ loop.index }}"><a class="lineno" href="#L{{ loop.index }}">{{ loop.index }}</a><span class="log-text">{{ text }}</span></div>
+  {% else %}
+  <div class="empty">This log file is empty.</div>
+  {% endfor %}
+</main>
+{% endblock %}
+{% block script %}
+<script>
+(function () {
+  const query = {{ query|tojson }};
+  const isRegex = {{ use_regex|tojson }};
+  const caseSensitive = {{ case_sensitive|tojson }};
+  if (query) {
+    document.querySelectorAll('#log .log-text').forEach(el => {
+      el.innerHTML = highlight(el.textContent, query, isRegex, caseSensitive);
+    });
+  }
+  const line = {{ line|tojson }};
+  const el = line ? document.getElementById('L' + line) : null;
+  if (el && !location.hash) {
+    el.scrollIntoView({block: 'center'});
+  }
+})();
+</script>
+{% endblock %}
